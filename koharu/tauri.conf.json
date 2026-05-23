@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Koharu TH Beta",
+  "productName": "KoharuTHBeta",
   "identifier": "com.hetcreep.koharu-th-beta",
   "build": {
     "beforeDevCommand": "bun --cwd ui dev",
