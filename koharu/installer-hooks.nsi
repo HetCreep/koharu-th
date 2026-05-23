@@ -72,6 +72,12 @@
   IfFileExists "$LOCALAPPDATA\KoharuTH\runtime\*.*" koharu_purge_ask
   IfFileExists "$LOCALAPPDATA\KoharuTH\recent-projects.json" koharu_purge_ask
   IfFileExists "$LOCALAPPDATA\KoharuTH\ml-device.json" koharu_purge_ask
+  ; WebView2 user data lives under the Tauri bundle identifier dir
+  ; ("%LOCALAPPDATA%\com.hetcreep.koharu-th-beta\EBWebView"), not under
+  ; KoharuTH — count it as an ownership marker so a clean uninstall also
+  ; reclaims it. The identifier is unique to this beta, so it never
+  ; collides with the official "Koharu" build.
+  IfFileExists "$LOCALAPPDATA\com.hetcreep.koharu-th-beta\*.*" koharu_purge_ask
   Goto koharu_purge_not_ours
 
 koharu_purge_ask:
@@ -116,6 +122,10 @@ koharu_purge_verified:
 
   DetailPrint "Deleting embedded WebView2 data (EBWebView)..."
   RMDir /r "$LOCALAPPDATA\KoharuTH\EBWebView"
+  ; WebView2 data the Tauri runtime actually uses lives under the bundle
+  ; identifier dir, not under KoharuTH. Remove it too for a clean wipe.
+  ; Unique to this beta — never the official "Koharu" build's data.
+  RMDir /r "$LOCALAPPDATA\com.hetcreep.koharu-th-beta"
 
   DetailPrint "Deleting saved settings (recent-projects.json)..."
   Delete "$LOCALAPPDATA\KoharuTH\recent-projects.json"

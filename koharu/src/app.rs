@@ -311,24 +311,12 @@ fn initialize(headless: bool, _debug: bool) -> Result<()> {
         Err(err) => tracing::warn!(?err, "Stale runtime GC failed"),
     }
 
-    // Migrate legacy Koharu folder → KoharuTH (branding rename). Must run
-    // before migrate_legacy_model_cache() so APP_ROOT exists first.
-    if let Some(local_dir) = dirs::data_local_dir() {
-        let legacy_path = local_dir.join("Koharu");
-        if legacy_path.exists() && !APP_ROOT.exists() {
-            tracing::info!(
-                "Migrating legacy Koharu directory from {:?} to {:?}",
-                legacy_path,
-                *APP_ROOT
-            );
-            if let Err(err) = robust_move_dir(&legacy_path, &*APP_ROOT) {
-                tracing::warn!(
-                    ?err,
-                    "Failed to migrate legacy Koharu directory automatically"
-                );
-            }
-        }
-    }
+    // NOTE: a legacy "%LOCALAPPDATA%\Koharu" → "KoharuTH" migration used to
+    // run here. It is intentionally DISABLED on the beta so the standalone
+    // beta can coexist with the official upstream build (EarthWL/koharu-th),
+    // which itself uses the identifier and data directory "Koharu". Moving
+    // "%LOCALAPPDATA%\Koharu" would hijack a co-installed official install's
+    // models/settings — exactly the collision the beta must avoid.
 
     // Migrate legacy `KoharuTH/models/` → `KoharuTH/hf/` for users
     // upgrading from v1.2.1. Best-effort: failure logs and we continue
@@ -340,7 +328,9 @@ fn initialize(headless: bool, _debug: bool) -> Result<()> {
     // Migrate WebView2 local storage and cache from the old identifier directory to the new one
     if let Some(local_dir) = dirs::data_local_dir() {
         let old_webview_path = APP_ROOT.join("EBWebView");
-        let new_appdata_path = local_dir.join("com.earthwl.koharu-th");
+        // Must match the Tauri bundle identifier in tauri.conf.json — Tauri
+        // stores WebView2 data under "%LOCALAPPDATA%\<identifier>\EBWebView".
+        let new_appdata_path = local_dir.join("com.hetcreep.koharu-th-beta");
         let new_webview_path = new_appdata_path.join("EBWebView");
 
         if old_webview_path.exists() && !new_webview_path.exists() {

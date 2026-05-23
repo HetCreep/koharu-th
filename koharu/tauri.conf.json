@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Koharu TH",
-  "identifier": "com.earthwl.koharu-th",
+  "productName": "Koharu TH Beta",
+  "identifier": "com.hetcreep.koharu-th-beta",
   "build": {
     "beforeDevCommand": "bun --cwd ui dev",
     "beforeBuildCommand": "bun --cwd ui build",
@@ -21,7 +21,7 @@
         "minWidth": 900,
         "minHeight": 600,
         "center": true,
-        "title": "Koharu TH",
+        "title": "Koharu TH Beta",
         "decorations": false
       },
       {
@@ -56,7 +56,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ1QjAxQjRENzYxOTE1MDYKUldRR0ZSbDJUUnV3MWFXN09pNjhoRmNMSTV2Ylh3Wm9CZHhiRE01RVZtYXFLWVd4Vi9SbkE4QnUK",
       "endpoints": [
-        "https://github.com/EarthWL/koharu-th/releases/latest/download/latest.json"
+        "https://github.com/HetCreep/koharu-th/releases/download/beta/latest.json"
       ]
     }
   }

@@ -1,6 +1,5 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "identifier": "Koharu",
   "build": {
     "features": [
       "cuda"
