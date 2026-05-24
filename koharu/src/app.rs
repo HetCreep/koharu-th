@@ -1082,6 +1082,102 @@ pub async fn run() -> Result<()> {
                         .plugin(tauri_plugin_updater::Builder::new().build())
                         .ok();
 
+                    // Splash-driven auto-update (block-until-ready). Before
+                    // provisioning runtime/models, check the beta channel and —
+                    // if a newer SIGNED build exists — download + install it,
+                    // streaming progress to the splash, then relaunch into the
+                    // new version. The CHECK is capped at 8s so an offline/slow
+                    // launch is never blocked (offline-first §1.5); the DOWNLOAD
+                    // then blocks with a progress bar, matching the cuDNN
+                    // provisioning UX (§1.6 splash-driven provisioning). Any
+                    // failure (no release yet, network down, bad signature) is
+                    // non-fatal — we log and continue on the current version.
+                    {
+                        use tauri::Emitter;
+                        use tauri_plugin_updater::UpdaterExt;
+                        match handle.updater() {
+                            Ok(updater) => {
+                                match tokio::time::timeout(
+                                    std::time::Duration::from_secs(8),
+                                    updater.check(),
+                                )
+                                .await
+                                {
+                                    Ok(Ok(Some(update))) => {
+                                        let version = update.version.clone();
+                                        tracing::info!(
+                                            %version,
+                                            "Update available — downloading at splash"
+                                        );
+                                        let _ = handle.emit(
+                                            "koharu://updater/progress",
+                                            serde_json::json!({
+                                                "kind": "started",
+                                                "version": version,
+                                            }),
+                                        );
+                                        // Atomic counter so the chunk callback
+                                        // stays a plain `Fn` (no captured-state
+                                        // mutation) regardless of the bound the
+                                        // updater requires.
+                                        use std::sync::Arc;
+                                        use std::sync::atomic::{AtomicU64, Ordering};
+                                        let downloaded = Arc::new(AtomicU64::new(0));
+                                        let prog = handle.clone();
+                                        let dl = downloaded.clone();
+                                        let install = update
+                                            .download_and_install(
+                                                move |chunk, total| {
+                                                    let done = dl
+                                                        .fetch_add(chunk as u64, Ordering::Relaxed)
+                                                        + chunk as u64;
+                                                    let _ = prog.emit(
+                                                        "koharu://updater/progress",
+                                                        serde_json::json!({
+                                                            "kind": "downloading",
+                                                            "bytes_done": done,
+                                                            "bytes_total": total,
+                                                        }),
+                                                    );
+                                                },
+                                                || {},
+                                            )
+                                            .await;
+                                        match install {
+                                            Ok(_) => {
+                                                let _ = handle.emit(
+                                                    "koharu://updater/progress",
+                                                    serde_json::json!({ "kind": "ready" }),
+                                                );
+                                                tracing::info!(
+                                                    "Update installed — restarting into new version"
+                                                );
+                                                handle.restart();
+                                            }
+                                            Err(err) => tracing::warn!(
+                                                ?err,
+                                                "Update download/install failed — continuing on current version"
+                                            ),
+                                        }
+                                    }
+                                    Ok(Ok(None)) => {
+                                        tracing::info!("No update available — running latest beta")
+                                    }
+                                    Ok(Err(err)) => tracing::warn!(
+                                        ?err,
+                                        "Update check failed — continuing offline"
+                                    ),
+                                    Err(_) => tracing::warn!(
+                                        "Update check timed out (8s) — continuing offline"
+                                    ),
+                                }
+                            }
+                            Err(err) => {
+                                tracing::warn!(?err, "Updater unavailable — skipping auto-update")
+                            }
+                        }
+                    }
+
                     // Block-until-ready cuDNN install. On first launch
                     // with an NVIDIA GPU but no cuDNN, download + extract
                     // it BEFORE build_resources runs candle's CUDA path,

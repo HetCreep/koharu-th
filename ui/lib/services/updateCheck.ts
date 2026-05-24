@@ -8,7 +8,11 @@
  * which is fine for a "user clicks Check for updates" flow.
  */
 
-const REPO = 'EarthWL/koharu-th'
+// Beta channel lives on the HetCreep fork. This lightweight GitHub-API
+// check is a best-effort secondary notifier; the primary update path is the
+// signed Tauri updater (splash-driven auto-install + the menu's manual
+// check), which reads the `beta` release's latest.json.
+const REPO = 'HetCreep/koharu-th'
 const LATEST_URL = `https://api.github.com/repos/${REPO}/releases/latest`
 
 export type UpdateCheckResult =

@@ -109,6 +109,50 @@ export default function SplashScreen() {
     }
   }, [])
 
+  // Splash-driven auto-update: the Rust setup hook checks the beta channel
+  // before provisioning and, if a newer signed build exists, downloads +
+  // installs it here. Surface its progress on the same bar so the user sees
+  // the update fetch instead of a frozen "Initializing…" screen.
+  useEffect(() => {
+    let unlisten: (() => void) | null = null
+    void (async () => {
+      const { listen } = await import('@tauri-apps/api/event')
+      unlisten = await listen<{
+        kind: string
+        version?: string
+        bytes_done?: number
+        bytes_total?: number | null
+      }>('koharu://updater/progress', (e) => {
+        const p = e.payload
+        if (p.kind === 'started') {
+          setProgress({
+            filename: t('common.updating', 'Downloading update…'),
+            percent: 0,
+          })
+        } else if (p.kind === 'downloading') {
+          const percent =
+            p.bytes_total && p.bytes_done
+              ? Math.min(100, Math.round((p.bytes_done / p.bytes_total) * 100))
+              : undefined
+          setProgress({
+            filename: p.version
+              ? `${t('common.updating', 'Downloading update…')} v${p.version}`
+              : t('common.updating', 'Downloading update…'),
+            percent,
+          })
+        } else if (p.kind === 'ready') {
+          setProgress({
+            filename: t('common.updateReady', 'Update ready — restarting…'),
+            percent: 100,
+          })
+        }
+      })
+    })()
+    return () => {
+      if (unlisten) unlisten()
+    }
+  }, [t])
+
   return (
     <main className='bg-background flex min-h-screen flex-col items-center justify-center select-none'>
       <span className='text-primary text-2xl font-semibold'>Koharu</span>

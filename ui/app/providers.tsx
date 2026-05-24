@@ -17,8 +17,6 @@ import { queryKeys } from '@/lib/query/keys'
 import { api, parseProcessProgress } from '@/lib/api'
 import { useDownloadStore } from '@/lib/downloads'
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
-import { usePreferencesStore } from '@/lib/stores/preferencesStore'
-import { triggerUpdateCheck } from '@/lib/services/autoUpdater'
 import { UpdateDialog } from '@/components/UpdateDialog'
 import { useOperationStore } from '@/lib/stores/operationStore'
 import { Toaster } from '@/components/ui/sonner'
@@ -182,17 +180,10 @@ export function Providers({ children }: { children: ReactNode }) {
     handleLanguageChange(i18n.language)
     i18n.on('languageChanged', handleLanguageChange)
 
-    // Startup update check if enabled
-    const mode = usePreferencesStore.getState().autoUpdateMode
-    if (mode === 'auto' || mode === 'notify') {
-      const timer = setTimeout(() => {
-        void triggerUpdateCheck(false)
-      }, 3000)
-      return () => {
-        clearTimeout(timer)
-        i18n.off('languageChanged', handleLanguageChange)
-      }
-    }
+    // Launch-time updates are now handled by the splash-driven auto-updater
+    // in the Rust setup hook (it downloads + installs the newest signed beta
+    // before the main window opens), so we no longer fire a duplicate check
+    // here. Manual "Check for updates" (menu / about page) still works.
 
     return () => {
       i18n.off('languageChanged', handleLanguageChange)
